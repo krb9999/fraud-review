@@ -300,10 +300,68 @@
     display: none;
   }
 
+  .legend {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 14px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-dot.red { background: var(--red); }
+  .legend-dot.yellow { background: var(--yellow); }
+  .legend-dot.green { background: var(--green); }
+
+  .legend-info { display: flex; flex-direction: column; gap: 2px; }
+
+  .legend-range {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .legend-item:nth-child(1) .legend-range { color: var(--red); }
+  .legend-item:nth-child(2) .legend-range { color: var(--yellow); }
+  .legend-item:nth-child(3) .legend-range { color: var(--green); }
+
+  .legend-desc {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
     .signals-grid { grid-template-columns: 1fr; }
     .api-row { flex-direction: column; }
+    .legend-item { min-width: 100%; }
   }
 </style>
 </head>
@@ -350,6 +408,34 @@
     <div class="form-group">
       <label>City / State / Zip</label>
       <input type="text" id="cityState" placeholder="McDonough, GA 30252">
+    </div>
+  </div>
+
+  <!-- Score Legend -->
+  <div style="margin-bottom: 24px;">
+    <div class="legend-title">Fraud Score Key</div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot red"></div>
+        <div class="legend-info">
+          <span class="legend-range">75–100 &middot; HIGH RISK</span>
+          <span class="legend-desc">Likely fraud — priority review, consider cancel</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot yellow"></div>
+        <div class="legend-info">
+          <span class="legend-range">40–74 &middot; MEDIUM RISK</span>
+          <span class="legend-desc">Suspicious — manual review recommended</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot green"></div>
+        <div class="legend-info">
+          <span class="legend-range">0–39 &middot; LOW RISK</span>
+          <span class="legend-desc">Likely legitimate — lower priority</span>
+        </div>
+      </div>
     </div>
   </div>
 
