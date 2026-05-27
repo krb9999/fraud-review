@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>aRes Fraud Review Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --border: #1e2330;
+    --border-bright: #2a3045;
+    --text: #c8d0e0;
+    --text-dim: #5a6480;
+    --text-bright: #e8edf5;
+    --accent: #3d6bff;
+    --accent-dim: #1a2d6e;
+    --red: #ff4d4d;
+    --red-dim: #3d1010;
+    --yellow: #f5c842;
+    --yellow-dim: #3d3010;
+    --green: #42c97a;
+    --green-dim: #0d3320;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.5px;
+  }
+
+  header span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    color: var(--text-bright);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text-dim); }
+
+  .api-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 24px;
+  }
+
+  .api-row .form-group { flex: 1; }
+
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  button:hover { opacity: 0.88; }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  /* Results */
+  #results { display: none; }
+
+  .verdict-bar {
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .verdict-bar.high { background: var(--red-dim); border: 1px solid var(--red); }
+  .verdict-bar.medium { background: var(--yellow-dim); border: 1px solid var(--yellow); }
+  .verdict-bar.low { background: var(--green-dim); border: 1px solid var(--green); }
+
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .verdict-text {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .verdict-bar.high .verdict-text { color: var(--red); }
+  .verdict-bar.medium .verdict-text { color: var(--yellow); }
+  .verdict-bar.low .verdict-text { color: var(--green); }
+
+  .verdict-score {
+    font-family: var(--mono);
+    font-size: 36px;
+    font-weight: 600;
+    opacity: 0.9;
+  }
+
+  .verdict-bar.high .verdict-score { color: var(--red); }
+  .verdict-bar.medium .verdict-score { color: var(--yellow); }
+  .verdict-bar.low .verdict-score { color: var(--green); }
+
+  .score-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    text-align: right;
+  }
+
+  .signals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .signal-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .signal-section h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .signal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+
+  .signal-key { color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+
+  .signal-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .flag-red { color: var(--red); }
+  .flag-yellow { color: var(--yellow); }
+  .flag-green { color: var(--green); }
+  .flag-neutral { color: var(--text); }
+
+  .notes-block {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .notes-block h3 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .notes-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-bright);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .copy-btn {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    padding: 8px 18px;
+    font-size: 11px;
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+
+  .loading {
+    text-align: center;
+    padding: 40px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    display: none;
+  }
+
+  .loading::after {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-left: 8px;
+    animation: pulse 0.8s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .error-msg {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .signals-grid { grid-template-columns: 1fr; }
+    .api-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>aRes // Fraud Review</h1>
+    <span>Order Risk Scoring</span>
+  </header>
+
+  <!-- API Key -->
+  <div class="api-row">
+    <div class="form-group">
+      <label>IPQS API Key</label>
+      <input type="password" id="apiKey" placeholder="Paste your IPQS API key" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Order Fields -->
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Order Number</label>
+      <input type="text" id="orderNum" placeholder="AON 4025770">
+    </div>
+    <div class="form-group">
+      <label>Customer Name</label>
+      <input type="text" id="custName" placeholder="Sophia Gutierrez">
+    </div>
+    <div class="form-group">
+      <label>Home Phone</label>
+      <input type="text" id="phone" placeholder="4046970603">
+    </div>
+    <div class="form-group">
+      <label>IP Address</label>
+      <input type="text" id="ipAddr" placeholder="172.226.7.97">
+    </div>
+    <div class="form-group full">
+      <label>Email Address</label>
+      <input type="text" id="email" placeholder="customer@email.com">
+    </div>
+    <div class="form-group">
+      <label>Billing Address</label>
+      <input type="text" id="address" placeholder="457 Turner Rd">
+    </div>
+    <div class="form-group">
+      <label>City / State / Zip</label>
+      <input type="text" id="cityState" placeholder="McDonough, GA 30252">
+    </div>
+  </div>
+
+  <button id="submitBtn" onclick="runCheck()">Run Fraud Check</button>
+
+  <hr class="divider">
+
+  <div class="loading" id="loading">Running IPQS checks</div>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div id="results">
+    <div class="verdict-bar" id="verdictBar">
+      <div>
+        <div class="verdict-label">Risk Level</div>
+        <div class="verdict-text" id="verdictText">—</div>
+      </div>
+      <div>
+        <div class="verdict-score" id="verdictScore">—</div>
+        <div class="score-label">composite score</div>
+      </div>
+    </div>
+
+    <div class="signals-grid">
+      <div class="signal-section">
+        <h3>📞 Phone</h3>
+        <div id="phoneSignals"></div>
+      </div>
+      <div class="signal-section">
+        <h3>🌐 IP Address</h3>
+        <div id="ipSignals"></div>
+      </div>
+      <div class="signal-section">
+        <h3>✉️ Email</h3>
+        <div id="emailSignals"></div>
+      </div>
+    </div>
+
+    <div class="notes-block">
+      <h3>Copy to Order Notes</h3>
+      <div class="notes-text" id="notesText"></div>
+      <button class="copy-btn" onclick="copyNotes()">Copy Notes to Clipboard</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PROXY = 'https://api.allorigins.win/get?url=';
+
+function sig(container, key, value, flagClass) {
+  container.innerHTML += `
+    <div class="signal-row">
+      <span class="signal-key">${key}</span>
+      <span class="signal-val ${flagClass}">${value}</span>
+    </div>`;
+}
+
+function flagBool(val, badIsTrue = true) {
+  if (val === null || val === undefined) return 'flag-neutral';
+  if (badIsTrue) return val ? 'flag-red' : 'flag-green';
+  return val ? 'flag-green' : 'flag-red';
+}
+
+function clean(phone) {
+  return phone.replace(/\D/g, '');
+}
+
+async function ipqsFetch(endpoint) {
+  const url = `https://www.ipqualityscore.com/api/json/${endpoint}`;
+  const proxyUrl = PROXY + encodeURIComponent(url);
+  const res = await fetch(proxyUrl);
+  const wrapper = await res.json();
+  return JSON.parse(wrapper.contents);
+}
+
+async function runCheck() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const phone = clean(document.getElementById('phone').value.trim());
+  const ip = document.getElementById('ipAddr').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const orderNum = document.getElementById('orderNum').value.trim();
+  const custName = document.getElementById('custName').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const cityState = document.getElementById('cityState').value.trim();
+
+  if (!apiKey) { showError('Please enter your IPQS API key.'); return; }
+  if (!phone && !ip && !email) { showError('Enter at least one of: phone, IP, or email.'); return; }
+
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('submitBtn').disabled = true;
+
+  let phoneData = null, ipData = null, emailData = null;
+
+  try {
+    const fetches = [];
+    if (phone) fetches.push(ipqsFetch(`phone/${apiKey}/${phone}?country[]=US`).then(d => phoneData = d).catch(() => {}));
+    if (ip) fetches.push(ipqsFetch(`ip/${apiKey}/${ip}`).then(d => ipData = d).catch(() => {}));
+    if (email) fetches.push(ipqsFetch(`email/${apiKey}/${email}`).then(d => emailData = d).catch(() => {}));
+    await Promise.all(fetches);
+  } catch(e) {
+    showError('Error reaching IPQS. Check your API key and try again.');
+    document.getElementById('submitBtn').disabled = false;
+    return;
+  }
+
+  document.getElementById('loading').style.display = 'none';
+
+  // Composite score
+  let scores = [];
+  if (phoneData?.success) scores.push(phoneData.fraud_score || 0);
+  if (ipData?.success) scores.push(ipData.fraud_score || 0);
+  if (emailData?.success) scores.push(emailData.fraud_score || 0);
+  const composite = scores.length ? Math.round(scores.reduce((a,b) => a+b,0) / scores.length) : 0;
+
+  // Hard flags
+  const hardFlags = [
+    phoneData?.recent_abuse,
+    phoneData?.VOIP,
+    ipData?.proxy,
+    ipData?.vpn,
+    emailData?.disposable,
+    emailData?.fraud_score >= 80
+  ].filter(Boolean).length;
+
+  let riskLevel, riskClass;
+  if (composite >= 75 || hardFlags >= 2) { riskLevel = 'HIGH RISK'; riskClass = 'high'; }
+  else if (composite >= 40 || hardFlags >= 1) { riskLevel = 'MEDIUM RISK'; riskClass = 'medium'; }
+  else { riskLevel = 'LOW RISK'; riskClass = 'low'; }
+
+  // Verdict bar
+  const vBar = document.getElementById('verdictBar');
+  vBar.className = `verdict-bar ${riskClass}`;
+  document.getElementById('verdictText').textContent = riskLevel;
+  document.getElementById('verdictScore').textContent = composite;
+
+  // Phone signals
+  const pDiv = document.getElementById('phoneSignals');
+  pDiv.innerHTML = '';
+  if (phoneData?.success) {
+    sig(pDiv, 'Fraud Score', phoneData.fraud_score, phoneData.fraud_score >= 75 ? 'flag-red' : phoneData.fraud_score >= 40 ? 'flag-yellow' : 'flag-green');
+    sig(pDiv, 'Valid', phoneData.valid ? 'Yes' : 'No', flagBool(!phoneData.valid));
+    sig(pDiv, 'Active', phoneData.active ? 'Yes' : 'No', flagBool(!phoneData.active));
+    sig(pDiv, 'VOIP', phoneData.VOIP ? 'YES' : 'No', flagBool(phoneData.VOIP));
+    sig(pDiv, 'Prepaid', phoneData.prepaid ? 'YES' : 'No', flagBool(phoneData.prepaid));
+    sig(pDiv, 'Recent Abuse', phoneData.recent_abuse ? 'YES' : 'No', flagBool(phoneData.recent_abuse));
+    sig(pDiv, 'Line Type', phoneData.line_type || 'N/A', 'flag-neutral');
+    sig(pDiv, 'Carrier', phoneData.carrier || 'N/A', 'flag-neutral');
+  } else {
+    pDiv.innerHTML = '<div class="signal-row"><span class="signal-key flag-neutral">No data</span></div>';
+  }
+
+  // IP signals
+  const iDiv = document.getElementById('ipSignals');
+  iDiv.innerHTML = '';
+  if (ipData?.success) {
+    sig(iDiv, 'Fraud Score', ipData.fraud_score, ipData.fraud_score >= 75 ? 'flag-red' : ipData.fraud_score >= 40 ? 'flag-yellow' : 'flag-green');
+    sig(iDiv, 'Proxy', ipData.proxy ? 'YES' : 'No', flagBool(ipData.proxy));
+    sig(iDiv, 'VPN', ipData.vpn ? 'YES' : 'No', flagBool(ipData.vpn));
+    sig(iDiv, 'Tor', ipData.tor ? 'YES' : 'No', flagBool(ipData.tor));
+    sig(iDiv, 'Bot', ipData.bot_status ? 'YES' : 'No', flagBool(ipData.bot_status));
+    sig(iDiv, 'Country', ipData.country_code || 'N/A', 'flag-neutral');
+    sig(iDiv, 'City', ipData.city || 'N/A', 'flag-neutral');
+    sig(iDiv, 'ISP', (ipData.ISP || 'N/A').substring(0,18), 'flag-neutral');
+  } else {
+    iDiv.innerHTML = '<div class="signal-row"><span class="signal-key flag-neutral">No data</span></div>';
+  }
+
+  // Email signals
+  const eDiv = document.getElementById('emailSignals');
+  eDiv.innerHTML = '';
+  if (emailData?.success) {
+    sig(eDiv, 'Fraud Score', emailData.fraud_score, emailData.fraud_score >= 75 ? 'flag-red' : emailData.fraud_score >= 40 ? 'flag-yellow' : 'flag-green');
+    sig(eDiv, 'Valid', emailData.valid ? 'Yes' : 'No', flagBool(!emailData.valid));
+    sig(eDiv, 'Disposable', emailData.disposable ? 'YES' : 'No', flagBool(emailData.disposable));
+    sig(eDiv, 'Deliverable', emailData.deliverability || 'N/A', emailData.deliverability === 'high' ? 'flag-green' : 'flag-yellow');
+    sig(eDiv, 'Spam Traps', emailData.spam_trap_score || 'none', emailData.spam_trap_score === 'none' ? 'flag-green' : 'flag-red');
+    sig(eDiv, 'Domain Age', emailData.domain_age?.human || 'N/A', 'flag-neutral');
+    sig(eDiv, 'First Seen', emailData.first_seen?.human || 'N/A', 'flag-neutral');
+  } else {
+    eDiv.innerHTML = '<div class="signal-row"><span class="signal-key flag-neutral">No data</span></div>';
+  }
+
+  // Build notes text
+  const ts = new Date().toLocaleString('en-US', {month:'2-digit',day:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+  let notes = `--- IPQS FRAUD REVIEW ${ts} ---\n`;
+  notes += `Order: ${orderNum || 'N/A'} | Customer: ${custName || 'N/A'}\n`;
+  notes += `Billing: ${address} ${cityState}\n\n`;
+  notes += `RISK LEVEL: ${riskLevel} (Composite Score: ${composite}/100)\n\n`;
+
+  if (phoneData?.success) {
+    notes += `PHONE (${document.getElementById('phone').value}):\n`;
+    notes += `  Score: ${phoneData.fraud_score} | Valid: ${phoneData.valid} | Active: ${phoneData.active}\n`;
+    notes += `  VOIP: ${phoneData.VOIP} | Prepaid: ${phoneData.prepaid} | Recent Abuse: ${phoneData.recent_abuse}\n`;
+    notes += `  Line: ${phoneData.line_type} | Carrier: ${phoneData.carrier}\n\n`;
+  }
+
+  if (ipData?.success) {
+    notes += `IP (${ip}):\n`;
+    notes += `  Score: ${ipData.fraud_score} | Proxy: ${ipData.proxy} | VPN: ${ipData.vpn} | Tor: ${ipData.tor}\n`;
+    notes += `  Location: ${ipData.city}, ${ipData.country_code} | ISP: ${ipData.ISP}\n\n`;
+  }
+
+  if (emailData?.success) {
+    notes += `EMAIL (${email}):\n`;
+    notes += `  Score: ${emailData.fraud_score} | Valid: ${emailData.valid} | Disposable: ${emailData.disposable}\n`;
+    notes += `  Deliverability: ${emailData.deliverability} | Domain Age: ${emailData.domain_age?.human || 'N/A'}\n\n`;
+  }
+
+  notes += `Reviewed by: _______________`;
+
+  document.getElementById('notesText').textContent = notes;
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('submitBtn').disabled = false;
+
+  window.scrollTo({ top: document.getElementById('results').offsetTop - 20, behavior: 'smooth' });
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function copyNotes() {
+  const text = document.getElementById('notesText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = 'Copy Notes to Clipboard', 2000);
+  });
+}
+</script>
+</body>
+</html>
