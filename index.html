@@ -973,10 +973,26 @@
       return str.substring(0, 10);
     }
 
+    // Filter 1: check-in = today or tomorrow
+    // Filter 2: skip clearly commissionable rows (commission % mentioned in policy)
+    function isCommissionable(row) {
+      const policy = (row['Hotel Res. Commission Policy'] || '').toLowerCase().trim();
+      if (!policy) return false; // blank = unknown, include it
+      // Skip if policy contains a commission percentage or agency commission language
+      return /percent|pct|agency commission/i.test(policy) && !/non-commission/i.test(policy);
+    }
+
     const filtered = rows.filter(row => {
       const checkin = normDate(row['Check-in date'] || row['checkin'] || row['check_in'] || row['CheckIn']);
-      return checkin === todayS || checkin === tomorrowS;
+      if (checkin !== todayS && checkin !== tomorrowS) return false;
+      if (isCommissionable(row)) return false;
+      return true;
     });
+
+    const skippedComm = rows.filter(row => {
+      const checkin = normDate(row['Check-in date'] || row['checkin'] || row['check_in'] || row['CheckIn']);
+      return (checkin === todayS || checkin === tomorrowS) && isCommissionable(row);
+    }).length;
 
     parsedOrders = filtered;
     const todayCount = filtered.filter(r => {
@@ -985,7 +1001,7 @@
     const tomorrowCount = filtered.length - todayCount;
 
     document.getElementById('fileInfo').textContent = 
-      `📄 ${filename} — ${rows.length} total orders, ${filtered.length} match today/tomorrow (${todayCount} today, ${tomorrowCount} tomorrow)`;
+      `📄 ${filename} — ${rows.length} total orders, ${filtered.length} to scan (${todayCount} today / ${tomorrowCount} tomorrow check-ins, ${skippedComm} commissionable skipped)`;
     document.getElementById('batchBtn').disabled = filtered.length === 0;
 
     if (filtered.length === 0) {
