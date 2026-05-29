@@ -941,28 +941,46 @@
     }
 
     // Filter: check-in = today or tomorrow
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Use string-based comparison to avoid timezone shifts (dates are YYYY-MM-DD)
+    function todayStr() {
+      const d = new Date();
+      return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0');
+    }
+    function tomorrowStr() {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0');
+    }
 
-    function parseDate(str) {
-      if (!str) return null;
-      const d = new Date(str);
-      d.setHours(0,0,0,0);
-      return isNaN(d) ? null : d;
+    const todayS = todayStr();
+    const tomorrowS = tomorrowStr();
+
+    function normDate(str) {
+      if (!str) return '';
+      // Handle YYYY-MM-DD, M/D/YYYY, MM/DD/YYYY
+      str = str.trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.substring(0, 10);
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        return parts[2].substring(0,4) + '-' +
+          parts[0].padStart(2,'0') + '-' +
+          parts[1].padStart(2,'0');
+      }
+      return str.substring(0, 10);
     }
 
     const filtered = rows.filter(row => {
-      const checkin = parseDate(row['Check-in date'] || row['checkin'] || row['check_in'] || row['CheckIn']);
-      if (!checkin) return false;
-      return checkin.getTime() === today.getTime() || checkin.getTime() === tomorrow.getTime();
+      const checkin = normDate(row['Check-in date'] || row['checkin'] || row['check_in'] || row['CheckIn']);
+      return checkin === todayS || checkin === tomorrowS;
     });
 
     parsedOrders = filtered;
     const todayCount = filtered.filter(r => {
-      const d = parseDate(r['Check-in date']); 
-      return d && d.getTime() === today.getTime();
+      return normDate(r['Check-in date']) === todayS;
     }).length;
     const tomorrowCount = filtered.length - todayCount;
 
