@@ -784,15 +784,22 @@
     if (emailData?.success) scores.push(emailData.fraud_score || 0);
     const composite = scores.length ? Math.round(scores.reduce((a,b) => a+b,0) / scores.length) : 0;
 
+    // Geo-mismatch: billing state vs IP region
+    const billingState = document.getElementById('cityState').value.trim().toUpperCase();
+    const ipRegion = (ipData?.region || '').toUpperCase();
+    const geoMismatch = ipData?.success && billingState && ipRegion &&
+      !billingState.includes(ipRegion) && !ipRegion.includes(billingState.split(',').pop().trim().substring(0,2));
+
     const hardFlags = [
       phoneData?.recent_abuse, phoneData?.VOIP,
       ipData?.proxy, ipData?.vpn,
-      emailData?.disposable, emailData?.fraud_score >= 80
+      emailData?.disposable, emailData?.fraud_score >= 25,
+      geoMismatch
     ].filter(Boolean).length;
 
     let riskLevel, riskClass;
     if (composite >= 75 || hardFlags >= 2) { riskLevel = 'HIGH RISK'; riskClass = 'high'; }
-    else if (composite >= 40 || hardFlags >= 1) { riskLevel = 'MEDIUM RISK'; riskClass = 'medium'; }
+    else if (composite >= 25 || hardFlags >= 1) { riskLevel = 'MEDIUM RISK'; riskClass = 'medium'; }
     else { riskLevel = 'LOW RISK'; riskClass = 'low'; }
 
     const vBar = document.getElementById('verdictBar');
@@ -824,6 +831,8 @@
       sig(iDiv, 'Country', ipData.country_code || 'N/A', 'flag-neutral');
       sig(iDiv, 'City', ipData.city || 'N/A', 'flag-neutral');
       sig(iDiv, 'ISP', (ipData.ISP || 'N/A').substring(0,18), 'flag-neutral');
+      if (geoMismatch) sig(iDiv, 'Geo Match', 'MISMATCH', 'flag-red');
+      else if (ipRegion) sig(iDiv, 'Geo Match', 'OK', 'flag-green');
     } else { iDiv.innerHTML = '<div class="signal-row"><span class="signal-key flag-neutral">No data</span></div>'; }
 
     const eDiv = document.getElementById('emailSignals');
@@ -852,7 +861,8 @@
     if (ipData?.success) {
       notes += `IP (${ip}):\n`;
       notes += `  Score: ${ipData.fraud_score} | Proxy: ${ipData.proxy} | VPN: ${ipData.vpn} | Tor: ${ipData.tor}\n`;
-      notes += `  Location: ${ipData.city}, ${ipData.country_code} | ISP: ${ipData.ISP}\n\n`;
+      notes += `  Location: ${ipData.city}, ${ipData.region}, ${ipData.country_code} | ISP: ${ipData.ISP}\n`;
+      notes += `  Geo Match: ${geoMismatch ? 'MISMATCH - Billing state does not match IP region' : 'OK'}\n\n`;
     }
     if (emailData?.success) {
       notes += `EMAIL (${email}):\n`;
@@ -1056,23 +1066,33 @@
       if (emailData?.success) scores.push(emailData.fraud_score || 0);
       const composite = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
 
+      // Velocity check: flag if phone or email seen more than once in this batch
+      const velocityFlags = [];
+      const phoneCount = parsedOrders.filter(o => o['Home Phone']?.replace(/\D/g,'') === phone && phone).length;
+      const emailCount = parsedOrders.filter(o => o['Customer Email'] === email && email).length;
+      const ipCount = parsedOrders.filter(o => o['IP Address'] === (order['IP Address'] || '') && order['IP Address']).length;
+      if (phoneCount > 1) velocityFlags.push(`Phone x${phoneCount}`);
+      if (emailCount > 1) velocityFlags.push(`Email x${emailCount}`);
+      if (ipCount > 1) velocityFlags.push(`IP x${ipCount}`);
+
       const hardFlags = [
         phoneData?.recent_abuse, phoneData?.VOIP,
-        emailData?.disposable, emailData?.fraud_score >= 80
+        emailData?.disposable, emailData?.fraud_score >= 25,
+        velocityFlags.length > 0
       ].filter(Boolean).length;
 
       let riskLevel, riskClass;
       if (composite >= 75 || hardFlags >= 2) { riskLevel = 'HIGH'; riskClass = 'high'; high++; }
-      else if (composite >= 40 || hardFlags >= 1) { riskLevel = 'MEDIUM'; riskClass = 'medium'; medium++; }
+      else if (composite >= 25 || hardFlags >= 1) { riskLevel = 'MEDIUM'; riskClass = 'medium'; medium++; }
       else { riskLevel = 'LOW'; riskClass = 'low'; low++; }
 
       // Flags
-      const flags = [];
+      const flags = [...velocityFlags];
       if (phoneData?.VOIP) flags.push('VOIP');
       if (phoneData?.prepaid) flags.push('Prepaid');
       if (phoneData?.recent_abuse) flags.push('Ph.Abuse');
       if (emailData?.disposable) flags.push('Disposable');
-      if (emailData?.fraud_score >= 75) flags.push('Email Risk');
+      if (emailData?.fraud_score >= 25) flags.push('Email Risk');
 
       const row = {
         orderNum, custName: custName.trim(), checkin,
