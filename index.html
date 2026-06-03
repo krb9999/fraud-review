@@ -737,9 +737,8 @@
   function clean(phone) { return phone.replace(/\D/g, ''); }
 
   async function ipqsFetch(type, value, apiKey, extra = '') {
-    // base64 encode the API key to safely pass in URL without encoding issues
-    const encodedKey = btoa(apiKey);
-    const url = `${PROXY_BASE}?type=${type}&k=${encodeURIComponent(encodedKey)}&val=${encodeURIComponent(value)}${extra}`;
+    // Double encode the API key to safely pass special characters in URL
+    const url = `${PROXY_BASE}?type=${type}&k=${encodeURIComponent(encodeURIComponent(apiKey))}&val=${encodeURIComponent(value)}${extra}`;
     const res = await fetch(url);
     return res.json();
   }
