@@ -737,8 +737,10 @@
   function clean(phone) { return phone.replace(/\D/g, ''); }
 
   async function ipqsFetch(type, value, apiKey, extra = '') {
-    const url = `${PROXY_BASE}?type=${type}&apiKey=${encodeURIComponent(apiKey)}&value=${encodeURIComponent(value)}${extra}`;
-    const res = await fetch(url);
+    const url = `${PROXY_BASE}?type=${type}&val=${encodeURIComponent(value)}${extra}`;
+    const res = await fetch(url, {
+      headers: { 'x-api-key': apiKey }
+    });
     return res.json();
   }
 
@@ -764,7 +766,7 @@
 
     try {
       const fetches = [];
-      if (phone) fetches.push(ipqsFetch('phone', phone, apiKey, '&country%5B%5D=US').then(d => phoneData = d).catch(() => {}));
+      if (phone) fetches.push(ipqsFetch('phone', phone, apiKey, '&country=US').then(d => phoneData = d).catch(() => {}));
       if (ip) fetches.push(ipqsFetch('ip', ip, apiKey).then(d => ipData = d).catch(() => {}));
       if (email) fetches.push(ipqsFetch('email', email, apiKey).then(d => emailData = d).catch(() => {}));
       await Promise.all(fetches);
@@ -1041,7 +1043,7 @@
       let phoneData = null, emailData = null;
       try {
         const fetches = [];
-        if (phone) fetches.push(ipqsFetch('phone', phone, apiKey, '&country%5B%5D=US').then(d => phoneData = d).catch(() => {}));
+        if (phone) fetches.push(ipqsFetch('phone', phone, apiKey, '&country=US').then(d => phoneData = d).catch(() => {}));
         if (email) fetches.push(ipqsFetch('email', email, apiKey).then(d => emailData = d).catch(() => {}));
         await Promise.all(fetches);
       } catch(e) {}
