@@ -540,6 +540,13 @@
     <span>Order Risk Scoring</span>
   </header>
 
+  <div class="api-row" style="margin-bottom:20px;">
+    <div class="form-group">
+      <label>IPQS API Key</label>
+      <input type="password" id="globalApiKey" placeholder="Paste your IPQS API key — applies to both tabs" autocomplete="off">
+    </div>
+  </div>
+
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('single')">Single Order</button>
     <button class="tab-btn" onclick="switchTab('batch')">Batch Upload (Hotels)</button>
@@ -554,7 +561,7 @@
   <div class="api-row">
     <div class="form-group">
       <label>IPQS API Key</label>
-      <input type="password" id="apiKey" placeholder="Paste your IPQS API key" autocomplete="off">
+      <input type="password" id="apiKey" placeholder="Use key field above" autocomplete="off" style="display:none">
     </div>
   </div>
 
@@ -667,7 +674,7 @@
     <div class="api-row">
       <div class="form-group">
         <label>IPQS API Key</label>
-        <input type="password" id="batchApiKey" placeholder="Paste your IPQS API key" autocomplete="off">
+        <input type="password" id="batchApiKey" placeholder="Use key field above" autocomplete="off" style="display:none">
       </div>
     </div>
 
@@ -744,7 +751,7 @@
   }
 
   async function runCheck() {
-    const apiKey = document.getElementById('apiKey').value.trim();
+    const apiKey = document.getElementById('globalApiKey').value.trim();
     const phone = clean(document.getElementById('phone').value.trim());
     const ip = document.getElementById('ipAddr').value.trim();
     const email = document.getElementById('email').value.trim();
@@ -1021,7 +1028,7 @@
   }
 
   async function runBatch() {
-    const apiKey = document.getElementById('batchApiKey').value.trim();
+    const apiKey = document.getElementById('globalApiKey').value.trim();
     if (!apiKey) { alert('Please enter your IPQS API key.'); return; }
     if (!parsedOrders.length) { alert('No orders to scan.'); return; }
 
