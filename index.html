@@ -530,6 +530,49 @@
 
   .dl-btn:hover { border-color: var(--green); color: var(--green); opacity: 1; }
 
+  /* Expandable detail panel */
+  .detail-row { display: none; }
+  .detail-row.open { display: table-row; }
+  .detail-panel {
+    background: #0a0c10;
+    border-top: 1px solid var(--border);
+    padding: 16px;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .detail-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .detail-section h4 {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .expand-btn:hover { color: var(--accent); opacity: 1; background: var(--surface); }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: #1a1f2e; }
+
 </style>
 </head>
 <body>
@@ -995,9 +1038,17 @@
     // Filter 2: skip clearly commissionable rows (commission % mentioned in policy)
     function isCommissionable(row) {
       const policy = (row['Hotel Res. Commission Policy'] || '').toLowerCase().trim();
-      if (!policy) return false; // blank = unknown, include it
-      // Skip if policy contains a commission percentage or agency commission language
-      return /percent|pct|agency commission/i.test(policy) && !/non-commission/i.test(policy);
+      
+      // Dhisco + deposit > 0 = commissionable
+      const isDhisco = (row['Inventory Source'] || '').toLowerCase().includes('dhisco');
+      const depositAmt = parseFloat(row['Deposit Amount'] || '0');
+      if (isDhisco && depositAmt > 0) return true;
+
+      if (!policy || policy === 'nan') return false; // blank = unknown, include it
+      // Skip if non-commissionable explicitly stated
+      if (/non-commission/i.test(policy)) return false;
+      // Flag as commissionable if % symbol or commission keywords present
+      return /percent|pct|agency commission|\d+\.?\d*%|\d+\.?\d* commission/i.test(policy);
     }
 
     const filtered = rows.filter(row => {
@@ -1117,8 +1168,9 @@
       };
       batchResultsData.push(row);
 
+      const rowId = `detail-${i}`;
       tbody.innerHTML += `
-        <tr>
+        <tr class="clickable" onclick="toggleDetail('${rowId}')">
           <td>${orderNum}</td>
           <td>${row.custName}</td>
           <td>${checkin}</td>
@@ -1128,6 +1180,43 @@
           <td class="${row.emailScore >= 75 ? 'flag-red' : row.emailScore >= 40 ? 'flag-yellow' : 'flag-green'}">${row.emailScore}</td>
           <td><span class="risk-badge ${riskClass}">${riskLevel}</span></td>
           <td class="${flags.length ? 'flag-red' : 'flag-green'}">${flags.join(', ') || '—'}</td>
+          <td><button class="expand-btn">▼</button></td>
+        </tr>
+        <tr class="detail-row" id="${rowId}">
+          <td colspan="10">
+            <div class="detail-panel">
+              <div class="detail-grid">
+                <div class="detail-section">
+                  <h4>📞 Phone</h4>
+                  ${phoneData?.success ? `
+                    <div class="signal-row"><span class="signal-key">Fraud Score</span><span class="signal-val ${phoneData.fraud_score >= 75 ? 'flag-red' : phoneData.fraud_score >= 25 ? 'flag-yellow' : 'flag-green'}">${phoneData.fraud_score}</span></div>
+                    <div class="signal-row"><span class="signal-key">Valid</span><span class="signal-val ${phoneData.valid ? 'flag-green' : 'flag-red'}">${phoneData.valid ? 'Yes' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Active</span><span class="signal-val ${phoneData.active ? 'flag-green' : 'flag-red'}">${phoneData.active ? 'Yes' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">VOIP</span><span class="signal-val ${phoneData.VOIP ? 'flag-red' : 'flag-green'}">${phoneData.VOIP ? 'YES' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Prepaid</span><span class="signal-val ${phoneData.prepaid ? 'flag-red' : 'flag-green'}">${phoneData.prepaid ? 'YES' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Recent Abuse</span><span class="signal-val ${phoneData.recent_abuse ? 'flag-red' : 'flag-green'}">${phoneData.recent_abuse ? 'YES' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Line Type</span><span class="signal-val flag-neutral">${phoneData.line_type || 'N/A'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Carrier</span><span class="signal-val flag-neutral">${phoneData.carrier || 'N/A'}</span></div>
+                  ` : '<div class="signal-row"><span class="signal-key flag-neutral">No data</span></div>'}
+                </div>
+                <div class="detail-section">
+                  <h4>🌐 IP Address</h4>
+                  <div class="signal-row"><span class="signal-key flag-neutral">Not available in hotel export</span></div>
+                </div>
+                <div class="detail-section">
+                  <h4>✉️ Email</h4>
+                  ${emailData?.success ? `
+                    <div class="signal-row"><span class="signal-key">Fraud Score</span><span class="signal-val ${emailData.fraud_score >= 75 ? 'flag-red' : emailData.fraud_score >= 25 ? 'flag-yellow' : 'flag-green'}">${emailData.fraud_score}</span></div>
+                    <div class="signal-row"><span class="signal-key">Valid</span><span class="signal-val ${emailData.valid ? 'flag-green' : 'flag-red'}">${emailData.valid ? 'Yes' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Disposable</span><span class="signal-val ${emailData.disposable ? 'flag-red' : 'flag-green'}">${emailData.disposable ? 'YES' : 'No'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Deliverable</span><span class="signal-val ${emailData.deliverability === 'high' ? 'flag-green' : 'flag-yellow'}">${emailData.deliverability || 'N/A'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Spam Traps</span><span class="signal-val ${emailData.spam_trap_score === 'none' ? 'flag-green' : 'flag-red'}">${emailData.spam_trap_score || 'none'}</span></div>
+                    <div class="signal-row"><span class="signal-key">Domain Age</span><span class="signal-val flag-neutral">${emailData.domain_age?.human || 'N/A'}</span></div>
+                  ` : '<div class="signal-row"><span class="signal-key flag-neutral">No data</span></div>'}
+                </div>
+              </div>
+            </div>
+          </td>
         </tr>`;
 
       document.getElementById('sTotal').textContent = i + 1;
@@ -1157,6 +1246,24 @@
     a.href = url;
     a.download = `fraud-scan-${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
+  }
+
+
+  function toggleDetail(id) {
+    const row = document.getElementById(id);
+    const isOpen = row.classList.contains('open');
+    // Close all open detail rows first
+    document.querySelectorAll('.detail-row.open').forEach(r => {
+      r.classList.remove('open');
+      const btn = r.previousElementSibling?.querySelector('.expand-btn');
+      if (btn) btn.textContent = '▼';
+    });
+    // Open this one if it wasn't already open
+    if (!isOpen) {
+      row.classList.add('open');
+      const btn = row.previousElementSibling?.querySelector('.expand-btn');
+      if (btn) btn.textContent = '▲';
+    }
   }
 
 </script>
