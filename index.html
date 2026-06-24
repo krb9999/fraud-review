@@ -722,7 +722,7 @@
     </div>
 
     <div class="filter-notice">
-      🔍 Auto-filter: Only orders where Check-in date = today or tomorrow will be scanned. Commissionable reservations are skipped. All other orders are excluded.
+      🔍 Auto-filter: Only orders where Check-in date = today, tomorrow, or 2 days out will be scanned. Commissionable reservations are skipped. All other orders are excluded.
     </div>
 
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvInput').click()">
@@ -1009,16 +1009,17 @@
         String(d.getMonth()+1).padStart(2,'0') + '-' +
         String(d.getDate()).padStart(2,'0');
     }
-    function tomorrowStr() {
+    function daysOutStr(n) {
       const d = new Date();
-      d.setDate(d.getDate() + 1);
+      d.setDate(d.getDate() + n);
       return d.getFullYear() + '-' +
         String(d.getMonth()+1).padStart(2,'0') + '-' +
         String(d.getDate()).padStart(2,'0');
     }
 
     const todayS = todayStr();
-    const tomorrowS = tomorrowStr();
+    const tomorrowS = daysOutStr(1);
+    const twoDaysS = daysOutStr(2);
 
     function normDate(str) {
       if (!str) return '';
@@ -1053,24 +1054,23 @@
 
     const filtered = rows.filter(row => {
       const checkin = normDate(row['Check-in date'] || row['checkin'] || row['check_in'] || row['CheckIn']);
-      if (checkin !== todayS && checkin !== tomorrowS) return false;
+      if (checkin !== todayS && checkin !== tomorrowS && checkin !== twoDaysS) return false;
       if (isCommissionable(row)) return false;
       return true;
     });
 
     const skippedComm = rows.filter(row => {
       const checkin = normDate(row['Check-in date'] || row['checkin'] || row['check_in'] || row['CheckIn']);
-      return (checkin === todayS || checkin === tomorrowS) && isCommissionable(row);
+      return (checkin === todayS || checkin === tomorrowS || checkin === twoDaysS) && isCommissionable(row);
     }).length;
 
     parsedOrders = filtered;
-    const todayCount = filtered.filter(r => {
-      return normDate(r['Check-in date']) === todayS;
-    }).length;
-    const tomorrowCount = filtered.length - todayCount;
+    const todayCount = filtered.filter(r => normDate(r['Check-in date']) === todayS).length;
+    const tomorrowCount = filtered.filter(r => normDate(r['Check-in date']) === tomorrowS).length;
+    const twoDaysCount = filtered.filter(r => normDate(r['Check-in date']) === twoDaysS).length;
 
     document.getElementById('fileInfo').textContent = 
-      `📄 ${filename} — ${rows.length} total orders, ${filtered.length} to scan (${todayCount} today / ${tomorrowCount} tomorrow check-ins, ${skippedComm} commissionable skipped)`;
+      `📄 ${filename} — ${rows.length} total orders, ${filtered.length} to scan (${todayCount} today / ${tomorrowCount} tomorrow / ${twoDaysCount} in 2 days, ${skippedComm} commissionable skipped)`;
     document.getElementById('batchBtn').disabled = filtered.length === 0;
 
     if (filtered.length === 0) {
