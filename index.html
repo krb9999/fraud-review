@@ -583,13 +583,6 @@
     <span>Order Risk Scoring</span>
   </header>
 
-  <div class="api-row" style="margin-bottom:20px;">
-    <div class="form-group">
-      <label>IPQS API Key</label>
-      <input type="password" id="globalApiKey" placeholder="Paste your IPQS API key — applies to both tabs" autocomplete="off">
-    </div>
-  </div>
-
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('single')">Single Order</button>
     <button class="tab-btn" onclick="switchTab('batch')">Batch Upload (Hotels)</button>
@@ -604,7 +597,7 @@
   <div class="api-row">
     <div class="form-group">
       <label>IPQS API Key</label>
-      <input type="password" id="apiKey" placeholder="Use key field above" autocomplete="off" style="display:none">
+
     </div>
   </div>
 
@@ -717,7 +710,7 @@
     <div class="api-row">
       <div class="form-group">
         <label>IPQS API Key</label>
-        <input type="password" id="batchApiKey" placeholder="Use key field above" autocomplete="off" style="display:none">
+
       </div>
     </div>
 
@@ -786,9 +779,8 @@
 
   function clean(phone) { return phone.replace(/\D/g, ''); }
 
-  async function ipqsFetch(type, value, apiKey, extra = '') {
-    // Double encode the API key to safely pass special characters in URL
-    const url = `${PROXY_BASE}?type=${type}&k=${encodeURIComponent(encodeURIComponent(apiKey))}&val=${encodeURIComponent(value)}${extra}`;
+  async function ipqsFetch(type, value, extra = '') {
+    const url = `${PROXY_BASE}?type=${type}&val=${encodeURIComponent(value)}${extra}`;
     const res = await fetch(url);
     return res.json();
   }
@@ -815,9 +807,9 @@
 
     try {
       const fetches = [];
-      if (phone) fetches.push(ipqsFetch('phone', phone, apiKey, '&country=US').then(d => phoneData = d).catch(() => {}));
-      if (ip) fetches.push(ipqsFetch('ip', ip, apiKey).then(d => ipData = d).catch(() => {}));
-      if (email) fetches.push(ipqsFetch('email', email, apiKey).then(d => emailData = d).catch(() => {}));
+      if (phone) fetches.push(ipqsFetch('phone', phone, '&country=US').then(d => phoneData = d).catch(() => {}));
+      if (ip) fetches.push(ipqsFetch('ip', ip).then(d => ipData = d).catch(() => {}));
+      if (email) fetches.push(ipqsFetch('email', email).then(d => emailData = d).catch(() => {}));
       await Promise.all(fetches);
     } catch(e) {
       showError('Error reaching proxy. Make sure your Vercel proxy is deployed.');
@@ -1079,8 +1071,7 @@
   }
 
   async function runBatch() {
-    const apiKey = document.getElementById('globalApiKey').value.trim();
-    if (!apiKey) { alert('Please enter your IPQS API key.'); return; }
+
     if (!parsedOrders.length) { alert('No orders to scan.'); return; }
 
     document.getElementById('batchBtn').disabled = true;
@@ -1110,8 +1101,8 @@
       let phoneData = null, emailData = null;
       try {
         const fetches = [];
-        if (phone) fetches.push(ipqsFetch('phone', phone, apiKey, '&country=US').then(d => phoneData = d).catch(() => {}));
-        if (email) fetches.push(ipqsFetch('email', email, apiKey).then(d => emailData = d).catch(() => {}));
+        if (phone) fetches.push(ipqsFetch('phone', phone, '&country=US').then(d => phoneData = d).catch(() => {}));
+        if (email) fetches.push(ipqsFetch('email', email).then(d => emailData = d).catch(() => {}));
         await Promise.all(fetches);
       } catch(e) {}
 
