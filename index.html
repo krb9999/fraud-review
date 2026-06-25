@@ -786,7 +786,6 @@
   }
 
   async function runCheck() {
-    const apiKey = document.getElementById('globalApiKey').value.trim();
     const phone = clean(document.getElementById('phone').value.trim());
     const ip = document.getElementById('ipAddr').value.trim();
     const email = document.getElementById('email').value.trim();
@@ -795,7 +794,6 @@
     const address = document.getElementById('address').value.trim();
     const cityState = document.getElementById('cityState').value.trim();
 
-    if (!apiKey) { showError('Please enter your IPQS API key.'); return; }
     if (!phone && !ip && !email) { showError('Enter at least one of: phone, IP, or email.'); return; }
 
     document.getElementById('errorMsg').style.display = 'none';
